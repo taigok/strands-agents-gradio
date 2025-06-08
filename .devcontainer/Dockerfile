@@ -1,4 +1,4 @@
-FROM mcr.microsoft.com/devcontainers/python:3.11-bullseye
+FROM mcr.microsoft.com/devcontainers/python:3.13-bookworm
 
 # Install system packages and Node.js for Claude Code
 RUN apt-get update && apt-get install -y \
@@ -52,8 +52,8 @@ RUN git config --global core.pager "delta" && \
 
 # Set up helpful aliases
 RUN echo 'alias cc="claude"' >> ~/.bashrc && \
-    echo 'alias strands-run="uv run python main.py"' >> ~/.bashrc && \
-    echo 'alias strands-test="uv run --frozen pytest"' >> ~/.bashrc && \
+    echo 'alias run="uv run python main.py"' >> ~/.bashrc && \
+    echo 'alias test="uv run --frozen pytest"' >> ~/.bashrc && \
     echo 'alias lint="uv run ruff check"' >> ~/.bashrc && \
     echo 'alias format="uv run ruff format"' >> ~/.bashrc && \
     echo 'alias typecheck="uv run pyright"' >> ~/.bashrc

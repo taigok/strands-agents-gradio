@@ -1,5 +1,5 @@
 {
-  "name": "Strands Agent + Claude Code",
+  "name": "Python + Claude Code",
   "build": {
     "dockerfile": "Dockerfile"
   },
@@ -14,15 +14,21 @@
     "vscode": {
       "extensions": [
         "ms-python.python",
-        "ms-python.black-formatter",
-        "ms-python.pylint",
-        "dbaeumer.vscode-eslint",
+        "charliermarsh.ruff",
+        "ms-pyright.pyright",
         "esbenp.prettier-vscode"
       ],
       "settings": {
         "python.defaultInterpreterPath": "/usr/local/bin/python",
-        "python.formatting.provider": "black",
-        "editor.formatOnSave": true,
+        "[python]": {
+          "editor.formatOnSave": true,
+          "editor.codeActionsOnSave": {
+            "source.fixAll": "explicit",
+            "source.organizeImports": "explicit"
+          },
+          "editor.defaultFormatter": "ms-python.python"
+        },
+        "ruff.organizeImports": true,
         "terminal.integrated.defaultProfile.linux": "bash"
       }
     }

@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "List(*)",
+      "Fetch(https://*)",
+      "Edit(*)",
+      "Bash(git:*)",
+      "Bash(npm:*)",
+      "Bash(ls:*)",
+      "Bash(cat:*)",
+      "Bash(mkdir:*)",
+      "Bash(mv:*)"
+    ]
+  }
+}

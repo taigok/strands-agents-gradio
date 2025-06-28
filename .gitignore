@@ -1,9 +1,4 @@
-# macOS
-.DS_Store
-.AppleDouble
-.LSOverride
-
-# Python
+# === Python ===
 __pycache__/
 *.py[cod]
 *$py.class
@@ -26,42 +21,116 @@ wheels/
 *.egg
 MANIFEST
 
-# Virtual Environments
+# === Virtual Environments ===
 venv/
 ENV/
 env/
-.venv
+.venv/
+.conda/
 
-# IDEs
+# === Package Managers ===
+pip-log.txt
+pip-delete-this-directory.txt
+node_modules/
+# Note: uv.lock should be committed for reproducible builds
+
+# === Environment Variables & Secrets ===
+.env
+.env.local
+.env.production
+.env.staging
+*.pem
+*.key
+secrets.json
+
+# === AWS & Cloud Credentials ===
+.aws/
+credentials
+config
+*.p12
+*.pfx
+
+# === IDEs & Editors ===
 .vscode/
 .idea/
 *.swp
 *.swo
 *~
+.project
+.classpath
+.settings/
 
-# Testing
+# === Testing ===
 .coverage
 .pytest_cache/
 .tox/
 htmlcov/
+.nox/
+coverage.xml
+*.cover
+.hypothesis/
 
-# Type checking
+# === Type Checking ===
 .mypy_cache/
 .dmypy.json
 dmypy.json
 .pyright/
 
-# Package managers
-pip-log.txt
-pip-delete-this-directory.txt
+# === Linting & Formatting ===
+.ruff_cache/
 
-# Project specific
+# === Logging ===
 *.log
-.env
-.env.local
+logs/
+log/
 
-# Dependency directories
-node_modules/
+# === Gradio Specific ===
+gradio_cached_examples/
+flagged/
+tmp/
 
-# DevContainer
+# === Model Context Protocol ===
+mcp_sessions/
+mcp_cache/
+
+# === Temporary Files ===
+*.tmp
+*.temp
+temp/
+tmp/
+
+# === OS Specific ===
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon?
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Linux
+*~
+.fuse_hidden*
+.directory
+.Trash-*
+
+# === DevContainer ===
 .devcontainer/.persistent_history
+
+# === Project Specific ===
+# Backup files
+*.bak
+*.backup
+
+# Large files
+*.bin
+*.dat
+models/
+checkpoints/
+
+# User-specific config overrides
+config.local.json
+settings.local.json

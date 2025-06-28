@@ -9,7 +9,7 @@ This project uses a DevContainer setup with Python 3.13 and modern Python toolin
 ## Common Commands
 
 ### Running Code
-- `run` or `uv run python main.py` - Run the main Python script
+- `run` or `uv run python main.py` - Run the Strands Agents + Gradio chat application (port 7862)
 
 ### Testing
 - `test` or `uv run --frozen pytest` - Run all tests
@@ -41,11 +41,29 @@ This project uses a DevContainer setup with Python 3.13 and modern Python toolin
 
 ## Project Structure
 
-This is a Python project template configured for development with Strands Agent and Claude Code. The project uses:
-- **uv** for Python package management
-- **ruff** for linting and formatting (replaces black, isort, flake8)
-- **pyright** for static type checking
-- **pytest** for testing
+This is a Strands Agents + Gradio + MCP integration chat application. The project provides:
+- **Single-file application**: `main.py` contains the complete chat interface
+- **Strands Agents SDK**: Integration with AWS Bedrock Claude models
+- **MCP Protocol**: Direct integration with AWS Documentation MCP Server
+- **Real-time debugging**: Callback handlers display agent internal processing
+- **Streaming interface**: Gradio ChatInterface with real-time status updates
+
+### Architecture
+- **Main Application**: `main.py` - Streamlined chat app with debug logging
+- **Model Integration**: Direct AWS Bedrock Claude 3 Haiku usage
+- **MCP Server**: External `awslabs.aws-documentation-mcp-server@latest` via uvx
+- **UI Framework**: Gradio for web-based chat interface
+
+### Environment Setup
+Required environment variables in `.env`:
+- `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` - AWS Bedrock credentials
+- `AWS_DEFAULT_REGION` - AWS region (default: ap-northeast-1)
+
+### Key Components
+- **Callback Handlers**: Real-time debugging shows agent internal processing (🤔 thinking, 🔧 tool usage, ✍️ response generation)
+- **Threading Model**: Agent processing runs in separate thread to enable streaming status updates
+- **MCP Integration**: Direct connection to AWS Documentation server via MCPClient
+- **Status Logging**: Both console logging and Gradio streaming display of agent activities
 
 ## Development Standards
 

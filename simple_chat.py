@@ -1,10 +1,12 @@
-"""超シンプルなStrands Agents + Gradio チャット"""
+"""シンプルなStrands Agents + Gradio + MCP チャット"""
 
 import os
 import logging
 import gradio as gr
 from strands import Agent
 from strands.models import BedrockModel
+from strands.tools.mcp import MCPClient
+from mcp import stdio_client, StdioServerParameters
 from dotenv import load_dotenv
 
 # ログ設定
@@ -26,25 +28,32 @@ bedrock_model = BedrockModel(
     temperature=temperature
 )
 
-# Agent作成
-agent = Agent(model=bedrock_model)
+# MCP クライアント作成
+mcp_client = MCPClient(lambda: stdio_client(
+    StdioServerParameters(
+        command="uvx",
+        args=["awslabs.aws-documentation-mcp-server@latest"]
+    )
+))
 
 def chat(message, history):
-    """シンプルなチャット関数"""
+    """MCPツール付きチャット関数"""
     try:
-        logger.info(f"チャット開始: {message}")
-        response = agent(message)
-        logger.info(f"チャット完了")
-        return str(response)
+        logger.info(f"チャット: {message}")
+        with mcp_client:
+            tools = mcp_client.list_tools_sync()
+            agent = Agent(model=bedrock_model, tools=tools)
+            response = agent(message)
+            return str(response)
     except Exception as e:
         logger.error(f"エラー: {e}")
-        return f"エラーが発生しました: {str(e)}"
+        return f"エラー: {str(e)}"
 
 # Gradioインターフェース
 interface = gr.ChatInterface(
     fn=chat,
-    title="Simple Strands Chat",
-    examples=["こんにちは", "今日の天気は？", "数学の問題を出して"]
+    title="Simple MCP Chat",
+    examples=["AWS Lambda とは？", "EC2 の料金は？", "こんにちは"]
 )
 
 if __name__ == "__main__":

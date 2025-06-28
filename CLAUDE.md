@@ -10,6 +10,7 @@ This project uses a DevContainer setup with Python 3.13 and modern Python toolin
 
 ### Running Code
 - `run` or `uv run python main.py` - Run the Strands Agents + Gradio chat application (port 7862)
+- `gradio main.py` - Run with hot reload enabled (開発時推奨)
 
 ### Testing
 - `test` or `uv run --frozen pytest` - Run all tests
@@ -98,3 +99,9 @@ Required environment variables in `.env`:
 - Git diffs are enhanced with delta for better readability
 - Command history persists across container restarts in `.devcontainer/.persistent_history`
 - **Always ask before committing**: When tasks are completed, Claude Code should ask for permission before creating git commits
+
+### Hot Reload (ホットリロード)
+開発時は `gradio main.py` コマンドを使用することで、ファイル変更時の自動リロードが有効になります：
+- ファイルを編集すると自動的にアプリが再読み込みされます
+- モデルやMCPクライアントは `gr.NO_RELOAD` ブロック内にあるため、再読み込みされません
+- UIの変更をすぐに確認できるため、開発効率が向上します

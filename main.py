@@ -97,52 +97,52 @@ def chat_stream(message, _history):
             yield "📊 MCPツールを取得中..."
             tools = mcp_client.list_tools_sync()
             
-            # ツール一覧をログ出力
+            # ツール一覧をログ出力（正しい属性アクセス方法）
             tool_names = []
+            tool_details = []
             for tool in tools:
                 tool_name = "unknown"
-                if hasattr(tool, '_tool'):
+                tool_desc = "説明なし"
+                
+                # MCPAgentToolオブジェクトの正しい属性アクセス
+                if hasattr(tool, 'mcp_tool'):
+                    tool_name = tool.mcp_tool.name
+                    tool_desc = tool.mcp_tool.description or "説明なし"
+                elif hasattr(tool, 'tool_name'):
+                    # 代替: tool_nameプロパティを使用
+                    tool_name = tool.tool_name
+                    tool_desc = getattr(tool, 'description', '説明なし')
+                elif hasattr(tool, '_tool'):
                     tool_name = getattr(tool._tool, 'name', 'unknown')
+                    tool_desc = getattr(tool._tool, 'description', '説明なし')
                 elif hasattr(tool, 'tool'):
                     tool_name = getattr(tool.tool, 'name', 'unknown')
+                    tool_desc = getattr(tool.tool, 'description', '説明なし')
                 elif hasattr(tool, 'name'):
                     tool_name = tool.name
+                    tool_desc = getattr(tool, 'description', '説明なし')
+                
                 tool_names.append(tool_name)
+                tool_details.append((tool_name, tool_desc))
             
             tool_status = f"📊 利用可能ツール数: {len(tools)} ({', '.join(tool_names)})"
             status_log.append(tool_status)
             logger.info(tool_status)
             
             # 各ツールの詳細もログ出力
-            for tool in tools:
-                tool_name = "unknown"
-                tool_desc = "説明なし"
-                if hasattr(tool, '_tool'):
-                    tool_name = getattr(tool._tool, 'name', 'unknown')
-                    tool_desc = getattr(tool._tool, 'description', '説明なし')
-                elif hasattr(tool, 'tool'):
-                    tool_name = getattr(tool.tool, 'name', 'unknown')
-                    tool_desc = getattr(tool.tool, 'description', '説明なし')
-                elif hasattr(tool, 'name'):
-                    tool_name = tool.name
-                    tool_desc = getattr(tool, 'description', '説明なし')
+            for tool_name, tool_desc in tool_details:
                 logger.info(f"🔧 ツール: {tool_name} - {tool_desc[:100]}...")
             
-            # ツール詳細を画面にも表示
-            tool_display = f"{tool_status}\n\n**📋 ツール詳細:**\n"
-            for tool in tools:
-                tool_name = "unknown"
-                tool_desc = "説明なし"
-                if hasattr(tool, '_tool'):
-                    tool_name = getattr(tool._tool, 'name', 'unknown')
-                    tool_desc = getattr(tool._tool, 'description', '説明なし')
-                elif hasattr(tool, 'tool'):
-                    tool_name = getattr(tool.tool, 'name', 'unknown')
-                    tool_desc = getattr(tool.tool, 'description', '説明なし')
-                elif hasattr(tool, 'name'):
-                    tool_name = tool.name
-                    tool_desc = getattr(tool, 'description', '説明なし')
-                tool_display += f"• **{tool_name}**: {tool_desc[:150]}...\n"
+            # ツール詳細を画面にも表示（簡潔版）
+            tool_display = f"{tool_status}\n\n"
+            
+            # ツール名のみ簡潔に表示
+            tool_display += "**📋 利用可能ツール:**\n"
+            for tool_name, tool_desc in tool_details:
+                tool_display += f"• **{tool_name}**\n"
+            
+            # 詳細情報へのリンク
+            tool_display += "\n💡 詳細情報は応答後のログセクションで確認できます。"
             
             yield tool_display
             
@@ -191,13 +191,27 @@ def chat_stream(message, _history):
                 if filtered_log:
                     log_section = "\n\n---\n**処理ログ:**\n" + "\n".join(filtered_log)
             
-            # ツール詳細情報を追加
+            # ツール詳細情報を追加（正しい属性アクセス方法）
             if tools:
-                tool_details = "\n\n---\n**利用可能なMCPツール:**\n"
+                tool_details_section = "\n\n---\n**利用可能なMCPツール:**\n"
+                
+                # ツール名のみ簡潔に表示
+                tool_names_list = []
+                tool_full_details = []
+                
                 for tool in tools:
                     tool_name = "unknown"
                     tool_desc = "説明なし"
-                    if hasattr(tool, '_tool'):
+                    
+                    # MCPAgentToolオブジェクトの正しい属性アクセス
+                    if hasattr(tool, 'mcp_tool'):
+                        tool_name = tool.mcp_tool.name
+                        tool_desc = tool.mcp_tool.description or "説明なし"
+                    elif hasattr(tool, 'tool_name'):
+                        # 代替: tool_nameプロパティを使用
+                        tool_name = tool.tool_name
+                        tool_desc = getattr(tool, 'description', '説明なし')
+                    elif hasattr(tool, '_tool'):
                         tool_name = getattr(tool._tool, 'name', 'unknown')
                         tool_desc = getattr(tool._tool, 'description', '説明なし')
                     elif hasattr(tool, 'tool'):
@@ -206,8 +220,21 @@ def chat_stream(message, _history):
                     elif hasattr(tool, 'name'):
                         tool_name = tool.name
                         tool_desc = getattr(tool, 'description', '説明なし')
-                    tool_details += f"• **{tool_name}**: {tool_desc}\n"
-                log_section += tool_details
+                    
+                    tool_names_list.append(tool_name)
+                    tool_full_details.append((tool_name, tool_desc))
+                
+                # ツール名のみ表示
+                tool_details_section += f"**使用ツール:** {', '.join(tool_names_list)}\n\n"
+                
+                # 詳細は別セクションで表示
+                tool_details_section += "**詳細情報:**\n"
+                for tool_name, tool_desc in tool_full_details:
+                    # 説明文を適切な長さに制限
+                    desc_preview = tool_desc[:150] + "..." if len(tool_desc) > 150 else tool_desc
+                    tool_details_section += f"• **{tool_name}**: {desc_preview}\n"
+                
+                log_section += tool_details_section
             
             logger.info("🏁 チャット処理完了")
             yield final_response + log_section
@@ -225,66 +252,54 @@ def get_initial_tools_info():
             
             info = f"🔧 **利用可能なMCPツール** ({len(tools)}個)\n\n"
             
-            # MCPAgentToolから実際のツール情報を抽出
+            # MCPAgentToolから実際のツール情報を抽出（正しい属性アクセス方法）
             for i, tool in enumerate(tools):
-                # デバッグ: ツールオブジェクトの内容を確認
+                tool_name = "unknown"
+                tool_desc = "説明なし"
+                
+                # 詳細デバッグ: MCPAgentToolの内部構造を調査
                 logger.info(f"ツール {i}: {type(tool)}")
-                logger.info(f"ツール属性: {[attr for attr in dir(tool) if not attr.startswith('_')]}")
+                logger.info(f"利用可能属性: {[attr for attr in dir(tool) if not attr.startswith('_')]}")
                 
-                # 様々な方法でツール情報を取得
-                tool_name = f"tool_{i+1}"
-                tool_desc = "MCP Tool"
-                
-                # MCPAgentToolの場合、内部の情報にアクセス
-                if hasattr(tool, 'name'):
-                    tool_name = str(tool.name)
-                if hasattr(tool, 'description'):
-                    tool_desc = str(tool.description)
-                if hasattr(tool, '__name__'):
-                    tool_name = tool.__name__
-                if hasattr(tool, '__doc__'):
-                    tool_desc = tool.__doc__ or tool_desc
-                
-                # MCPAgentToolの内部属性を詳しく調査
-                try:
-                    # すべての属性を調査
-                    all_attrs = dir(tool)
-                    logger.info(f"全属性: {all_attrs}")
+                # MCPAgentToolオブジェクトの正しい属性アクセス
+                if hasattr(tool, 'mcp_tool'):
+                    tool_name = tool.mcp_tool.name
+                    tool_desc = tool.mcp_tool.description or "説明なし"
+                    logger.info(f"✅ mcp_tool 属性経由: {tool_name}")
+                elif hasattr(tool, 'tool_name'):
+                    # 代替: tool_nameプロパティを使用
+                    tool_name = tool.tool_name
+                    tool_desc = getattr(tool, 'description', '説明なし')
+                    logger.info(f"✅ tool_name プロパティ経由: {tool_name}")
+                else:
+                    # さらに詳細な調査
+                    logger.info(f"🔍 すべての属性: {dir(tool)}")
                     
-                    # _で始まる属性も確認
-                    private_attrs = [attr for attr in all_attrs if attr.startswith('_') and not attr.startswith('__')]
-                    logger.info(f"プライベート属性: {private_attrs}")
+                    # プライベート属性も含めて調査
+                    for attr in dir(tool):
+                        if 'tool' in attr.lower() or 'mcp' in attr.lower():
+                            try:
+                                attr_value = getattr(tool, attr)
+                                logger.info(f"🔍 {attr}: {type(attr_value)} = {attr_value}")
+                                
+                                # 内部オブジェクトの name と description を確認
+                                if hasattr(attr_value, 'name'):
+                                    tool_name = attr_value.name
+                                    logger.info(f"✅ {attr}.name: {tool_name}")
+                                if hasattr(attr_value, 'description'):
+                                    tool_desc = attr_value.description or "説明なし"
+                                    logger.info(f"✅ {attr}.description: {tool_desc[:50]}...")
+                            except Exception as e:
+                                logger.info(f"❌ {attr} アクセスエラー: {e}")
                     
-                    # 特定の属性をチェック
-                    if hasattr(tool, '_mcp_tool'):
-                        mcp_tool = tool._mcp_tool
-                        logger.info(f"_mcp_tool: {mcp_tool}")
-                        if hasattr(mcp_tool, 'name'):
-                            tool_name = mcp_tool.name
-                        if hasattr(mcp_tool, 'description'):
-                            tool_desc = mcp_tool.description
-                    
-                    if hasattr(tool, 'tool_def'):
-                        tool_def = tool.tool_def
-                        logger.info(f"tool_def: {tool_def}")
-                        if hasattr(tool_def, 'name'):
-                            tool_name = tool_def.name
-                        if hasattr(tool_def, 'description'):
-                            tool_desc = tool_def.description
-                            
-                    if hasattr(tool, 'schema'):
-                        schema = tool.schema
-                        logger.info(f"schema: {schema}")
-                        
-                except Exception as e:
-                    logger.error(f"属性調査エラー: {e}")
+                    # フォールバック
+                    if tool_name == "unknown":
+                        tool_name = f"MCP_Tool_{i+1}"
+                        tool_desc = "MCP Tool"
                 
-                info += f"• **{tool_name}**: {tool_desc}\n"
+                logger.info(f"🔧 最終ツール情報: {tool_name} - {tool_desc[:50]}...")
+                info += f"• **{tool_name}**\n"
             
-            info += "\n💡 **使用例:**\n"
-            info += "- AWS Lambda について質問してください\n"
-            info += "- EC2、S3、DynamoDB等のAWSサービスについて聞けます\n"
-            info += "- 設定方法、ベストプラクティス、料金等の質問が可能です\n"
             
             return info
     except Exception as e:
@@ -298,15 +313,10 @@ def get_initial_tools_info():
 • **AWS Documentation Server**: AWS公式ドキュメント検索
 • **詳細**: チャット時に動的に表示されます
 
-💡 **使用例:**
-- "AWS Lambda とは？"
-- "EC2 の料金は？"
-- "S3バケットの設定方法を教えて"
-
 ⚠️ 初期ツール情報取得中にエラーが発生しましたが、チャット機能は正常に動作します。"""
 
 # Gradioインターフェース
-with gr.Blocks(title="Simple MCP Chat with Debug") as interface:
+with gr.Blocks(title="Simple MCP Chat with Debug", css="footer{display:none !important}") as interface:
     gr.Markdown("# Simple MCP Chat with Debug")
     gr.Markdown("Strands Agents + AWS Documentation MCP Server")
     
@@ -329,4 +339,4 @@ with gr.Blocks(title="Simple MCP Chat with Debug") as interface:
 if __name__ == "__main__":
     # 開発時は `gradio main.py` で実行してホットリロードを有効化
     # 本番環境では `python main.py` で実行
-    interface.launch(server_name="0.0.0.0", server_port=7862)
+    interface.launch(server_name="0.0.0.0", server_port=7862, show_api=False)

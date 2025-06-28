@@ -614,30 +614,14 @@ class MCPChatApp:
             with gr.Tabs():
                 # チャットタブ
                 with gr.Tab("💬 チャット"):
-                    gr.Markdown(
-                        "### 🤖 AIアシスタント（リアルタイムステータス表示付き）"
-                    )
-                    gr.Markdown(
-                        "何でもお聞きください。計算、テキスト処理、時刻確認など様々なツールが利用できます。"
-                    )
-                    gr.Markdown(
-                        "**📱 ステータス表示機能**: チャット中にAIの思考プロセスやツール使用状況がリアルタイムで表示されます。"
-                    )
-
-                    # ストリーミングチャットインターフェース
                     gr.ChatInterface(
                         fn=self.chat_stream,
-                        title="AIアシスタント（ストリーミング版）",
-                        description="リアルタイムでAIの状態を確認しながらチャットできます",
                         examples=[
                             "2 + 3 * 4 を計算して",
                             "現在の時刻を教えて",
                             "「Hello World」の文字数を数えて",
                             "こんにちは、今日は何ができますか？",
                         ],
-                        # ストリーミング有効化
-                        show_progress="full",
-                        multimodal=False,
                     )
 
                 # MCPサーバ管理タブ

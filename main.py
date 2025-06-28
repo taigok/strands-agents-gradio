@@ -1,20 +1,21 @@
 """シンプルなStrands Agents + Gradio + MCP チャット"""
 
-import os
 import logging
+import os
 import threading
 import time
+
 import gradio as gr
+from dotenv import load_dotenv
 from gradio import ChatMessage
+from mcp import StdioServerParameters, stdio_client
 from strands import Agent
 from strands.models import BedrockModel
 from strands.tools.mcp import MCPClient
-from mcp import stdio_client, StdioServerParameters
-from dotenv import load_dotenv
 
 # ログ設定
 logging.basicConfig(
-    level=logging.DEBUG, format="%(asctime)s - %(levelname)s - %(message)s"
+    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger(__name__)
 
@@ -440,9 +441,10 @@ with gr.Blocks(
     gr.Markdown(get_initial_tools_info())
 
     # チャットインターフェース
+    chatbot = gr.Chatbot(type="messages", height=500)
     gr.ChatInterface(
         fn=chat_stream,
-        type="messages",
+        chatbot=chatbot,
         examples=[
             "AWS Lambda とは？",
             "EC2 の料金は？",

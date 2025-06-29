@@ -2,8 +2,8 @@
 
 import logging
 import os
+import queue
 import threading
-import time
 
 import gradio as gr
 from dotenv import load_dotenv
@@ -19,6 +19,15 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+# デフォルトのシステムプロンプト
+DEFAULT_SYSTEM_PROMPT = (
+    "あなたはAWSのドキュメントに精通した技術アシスタントです。"
+    "ユーザーの質問に対して、MCPツールを使用してAWSの公式ドキュメントから正確な情報を検索し、"
+    "わかりやすく簡潔に回答してください。"
+    "回答には具体例やベストプラクティスを含めると良いでしょう。"
+    "技術的な内容は正確に、しかし初心者にも理解しやすいように説明してください。"
+)
+
 # gr.NO_RELOAD を使用して、リロード時に再実行されないようにする
 if gr.NO_RELOAD:
     # 環境変数読み込み
@@ -28,6 +37,9 @@ if gr.NO_RELOAD:
     aws_region = os.getenv("AWS_DEFAULT_REGION", "ap-northeast-1")
     model_id = "anthropic.claude-3-haiku-20240307-v1:0"
     temperature = 0.1
+
+    # システムプロンプトを環境変数から取得（オプション）
+    system_prompt_override = os.getenv("SYSTEM_PROMPT", DEFAULT_SYSTEM_PROMPT)
 
     logger.info("🚀 初期化: モデルとMCPクライアントをロード中...")
 
@@ -62,13 +74,44 @@ def chat_stream(message, history):
         history.append(ChatMessage(role="user", content=message))
         yield history
 
+        # キューを先に定義
+        update_queue = queue.Queue()
+
         # コールバックハンドラーでログ表示
         def debug_callback(**kwargs):
-            nonlocal current_status, history
+            nonlocal current_status, history, used_tools, update_queue
             # すべてのkwargsをログ出力してデバッグ
             logger.info(f"🔍 Callback kwargs: {list(kwargs.keys())}")
-            for key, value in kwargs.items():
-                logger.info(f"🔍 {key}: {type(value)} = {str(value)[:200]}...")
+
+            # event形式のコールバックを処理
+            if "event" in kwargs:
+                event_data = kwargs["event"]
+                logger.info(
+                    f"🔍 Event data: {type(event_data)} = {str(event_data)[:300]}..."
+                )
+
+                # ツール使用の開始を検出
+                if isinstance(event_data, dict):
+                    if "contentBlockStart" in event_data:
+                        content_block = event_data.get("contentBlockStart", {}).get(
+                            "start", {}
+                        )
+                        if "toolUse" in content_block:
+                            tool_use = content_block["toolUse"]
+                            tool_name = tool_use.get("name", "unknown")
+
+                            history.append(
+                                ChatMessage(
+                                    role="assistant",
+                                    content=f"🔧 ツール '{tool_name}' を実行中...",
+                                    metadata={"title": f"🔧 ツール使用: {tool_name}"},
+                                )
+                            )
+                            used_tools.append(tool_name)
+                            logger.info(f"🔧 ツール使用開始: {tool_name}")
+                            # キューに更新を追加
+                            update_queue.put(("update", None))
+                            return
 
             if "current_tool_use" in kwargs:
                 tool_info = kwargs["current_tool_use"]
@@ -94,7 +137,8 @@ def chat_stream(message, history):
                     )
                 )
                 used_tools.append(tool_name)
-                yield history
+                # キューに更新を追加
+                update_queue.put(("update", None))
 
                 status = f"🔧 ツール使用: {tool_name}"
                 status_log.append(status)
@@ -177,7 +221,8 @@ def chat_stream(message, history):
                     )
                 )
                 used_tools.append(tool_name)
-                yield history
+                # キューに更新を追加
+                update_queue.put(("update", None))
                 logger.info(f"🔧 ツール使用 (tool_use): {tool_name}")
             elif "tool_result" in kwargs:
                 # ツール結果
@@ -195,7 +240,8 @@ def chat_stream(message, history):
                         metadata={"title": "✅ ツール実行完了"},
                     )
                 )
-                yield history
+                # キューに更新を追加
+                update_queue.put(("update", None))
                 logger.info(f"✅ ツール結果: {result_preview}")
             else:
                 # その他のコールバック
@@ -272,7 +318,10 @@ def chat_stream(message, history):
             yield history
 
             agent = Agent(
-                model=bedrock_model, tools=tools, callback_handler=debug_callback
+                model=bedrock_model,
+                tools=tools,
+                callback_handler=debug_callback,
+                system_prompt=system_prompt_override,
             )
 
             # Agent処理を別スレッドで実行
@@ -299,10 +348,15 @@ def chat_stream(message, history):
             agent_thread = threading.Thread(target=run_agent)
             agent_thread.start()
 
-            # ステータス監視 - ChatMessageは callback で追加されるので、ここでは待機のみ
-            last_status = ""
+            # ステータス監視とキューからの更新処理
             while agent_thread.is_alive():
-                time.sleep(0.1)
+                try:
+                    # キューから更新を取得（タイムアウト付き）
+                    update_type, _ = update_queue.get(timeout=0.1)
+                    if update_type == "update":
+                        yield history
+                except queue.Empty:
+                    pass
 
             # Agent完了を待つ
             agent_thread.join()

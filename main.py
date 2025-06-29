@@ -412,7 +412,7 @@ def get_initial_tools_info():
         with mcp_client:
             tools = mcp_client.list_tools_sync()
 
-            info = f"🔧 **利用可能なMCPツール** ({len(tools)}個)\n\n"
+            info = f"🔧 **利用可能なMCPツール** ({len(tools)}個) "
 
             # MCPAgentToolから実際のツール情報を抽出（正しい属性アクセス方法）
             for i, tool in enumerate(tools):
@@ -488,8 +488,7 @@ def get_initial_tools_info():
 with gr.Blocks(
     title="Simple MCP Chat with Debug", css="footer{display:none !important}"
 ) as interface:
-    gr.Markdown("# Simple MCP Chat with Debug")
-    gr.Markdown("Strands Agents + AWS Documentation MCP Server")
+    gr.Markdown("# MCP エージェントチャット <sub>Strands Agents + AWS Documentation MCP Server</sub>")
 
     # ツール情報を初期表示
     gr.Markdown(get_initial_tools_info())

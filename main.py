@@ -35,7 +35,7 @@ if gr.NO_RELOAD:
 
     # AWS設定
     aws_region = os.getenv("AWS_DEFAULT_REGION", "ap-northeast-1")
-    model_id = "anthropic.claude-3-haiku-20240307-v1:0"
+    model_id = "apac.anthropic.claude-sonnet-4-20250514-v1:0"
     temperature = 0.1
 
     # システムプロンプトを環境変数から取得（オプション）
@@ -406,6 +406,15 @@ def chat_stream(message, history):
         yield history
 
 
+def get_model_info():
+    """現在使用中のモデル情報を取得"""
+    try:
+        return f"🤖 **{model_id}** ({aws_region}) - Temperature: {temperature}"
+    except Exception as e:
+        logger.error(f"モデル情報取得エラー: {e}")
+        return "🤖 **モデル情報取得中...**"
+
+
 def get_initial_tools_info():
     """初期表示用のツール情報を取得"""
     try:
@@ -487,8 +496,11 @@ def get_initial_tools_info():
 # Gradioインターフェース
 with gr.Blocks(
     title="Simple MCP Chat with Debug", css="footer{display:none !important}"
-) as interface:
+) as demo:
     gr.Markdown("# MCP エージェントチャット <sub>Strands Agents + AWS Documentation MCP Server</sub>")
+    
+    # モデル情報を表示
+    gr.Markdown(get_model_info())
 
     # ツール情報を初期表示
     gr.Markdown(get_initial_tools_info())
@@ -511,4 +523,4 @@ with gr.Blocks(
 if __name__ == "__main__":
     # 開発時は `gradio main.py` で実行してホットリロードを有効化
     # 本番環境では `python main.py` で実行
-    interface.launch(server_name="0.0.0.0", server_port=7862, show_api=False)
+    demo.launch(server_name="0.0.0.0", server_port=7862, show_api=False)

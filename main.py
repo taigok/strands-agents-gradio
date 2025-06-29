@@ -415,6 +415,53 @@ def get_model_info():
         return "🤖 **モデル情報取得中...**"
 
 
+def get_detailed_model_info():
+    """詳細なモデル情報を取得（設定タブ用）"""
+    try:
+        info = f"""**現在のモデル設定:**
+
+🤖 **モデル**: {model_id}
+🌍 **リージョン**: {aws_region}
+🌡️ **Temperature**: {temperature}
+
+**モデル詳細:**
+- プロバイダー: Anthropic Claude (AWS Bedrock)
+- バージョン: Sonnet 4 (2025-05-14)
+- 最大トークン数: 8192 (出力)
+- コンテキスト長: 200,000 トークン
+
+**設定について:**
+- Temperature: 創造性とランダム性を制御 (0.0-1.0)
+- 現在の設定は技術文書向けに最適化されています"""
+        return info
+    except Exception as e:
+        logger.error(f"詳細モデル情報取得エラー: {e}")
+        return "🤖 **モデル情報取得中...**"
+
+
+def get_mcp_server_status():
+    """MCPサーバの状態を取得"""
+    try:
+        with mcp_client:
+            tools = mcp_client.list_tools_sync()
+            return f"✅ **接続済み**: AWS Documentation MCP Server ({len(tools)}個のツール)"
+    except Exception as e:
+        logger.error(f"MCPサーバ状態取得エラー: {e}")
+        return "❌ **未接続**: MCPサーバに接続できません"
+
+
+def restart_mcp_client():
+    """MCPクライアントを再起動"""
+    try:
+        # 簡単な再接続テスト
+        with mcp_client:
+            tools = mcp_client.list_tools_sync()
+            return f"✅ 再接続成功: {len(tools)}個のツールが利用可能"
+    except Exception as e:
+        logger.error(f"MCP再接続エラー: {e}")
+        return f"❌ 再接続失敗: {str(e)}"
+
+
 def get_initial_tools_info():
     """初期表示用のツール情報を取得"""
     try:
@@ -498,27 +545,86 @@ with gr.Blocks(
     title="Simple MCP Chat with Debug", css="footer{display:none !important}"
 ) as demo:
     gr.Markdown("# MCP エージェントチャット <sub>Strands Agents + AWS Documentation MCP Server</sub>")
-    
-    # モデル情報を表示
-    gr.Markdown(get_model_info())
 
-    # ツール情報を初期表示
-    gr.Markdown(get_initial_tools_info())
+    with gr.Tabs():
+        # メインチャットタブ
+        with gr.Tab("💬 チャット"):
+            # ツール情報を初期表示
+            gr.Markdown(get_initial_tools_info())
 
-    # チャットインターフェース
-    chatbot = gr.Chatbot(type="messages", height=500)
-    gr.ChatInterface(
-        fn=chat_stream,
-        chatbot=chatbot,
-        examples=[
-            "AWS Lambda とは？",
-            "EC2 の料金は？",
-            "S3バケットの設定方法を教えて",
-            "DynamoDBのパフォーマンス最適化について",
-            "VPCとセキュリティグループの違いは？",
-            "CloudFormationテンプレートの例を見せて",
-        ],
-    )
+            # チャットインターフェース
+            chatbot = gr.Chatbot(type="messages", height=500)
+            gr.ChatInterface(
+                fn=chat_stream,
+                chatbot=chatbot,
+                examples=[
+                    "AWS Lambda とは？",
+                    "EC2 の料金は？",
+                    "S3バケットの設定方法を教えて",
+                    "DynamoDBのパフォーマンス最適化について",
+                    "VPCとセキュリティグループの違いは？",
+                    "CloudFormationテンプレートの例を見せて",
+                ],
+            )
+
+        # モデル設定タブ
+        with gr.Tab("🤖 モデル設定"):
+            gr.Markdown("## AI モデル設定")
+            
+            # 現在のモデル情報表示
+            gr.Markdown(get_detailed_model_info())
+            
+            gr.Markdown("## システムプロンプト")
+            system_prompt_display = gr.Textbox(
+                label="現在のシステムプロンプト",
+                value=system_prompt_override,
+                interactive=False,
+                lines=6,
+                max_lines=10
+            )
+            
+            gr.Markdown("""## 設定変更について
+            
+現在のモデル設定は環境変数と起動時設定により固定されています：
+
+- **モデル変更**: `model_id` 変数を変更してアプリを再起動
+- **Temperature調整**: `temperature` 変数を変更してアプリを再起動  
+- **リージョン変更**: 環境変数 `AWS_DEFAULT_REGION` を設定
+- **システムプロンプト**: 環境変数 `SYSTEM_PROMPT` を設定
+
+⚠️ 設定変更にはアプリケーションの再起動が必要です。
+            """)
+
+        # MCP設定タブ
+        with gr.Tab("⚙️ MCP設定"):
+            gr.Markdown("## MCP サーバ管理")
+            
+            # サーバ状態表示
+            with gr.Row():
+                status_btn = gr.Button("🔄 状態確認", variant="secondary")
+                restart_btn = gr.Button("🔄 再接続", variant="primary")
+            
+            status_display = gr.Textbox(
+                label="サーバ状態",
+                value=get_mcp_server_status(),
+                interactive=False,
+                lines=2
+            )
+            
+            gr.Markdown("## 設定情報")
+            gr.Markdown("""
+**接続中のMCPサーバ:**
+- AWS Documentation MCP Server
+- コマンド: `uvx awslabs.aws-documentation-mcp-server@latest`
+- リージョン: ap-northeast-1
+
+**利用可能なツール:**
+AWS公式ドキュメントの検索とコンテンツ取得
+            """)
+            
+            # イベントハンドラ
+            status_btn.click(fn=get_mcp_server_status, outputs=status_display)
+            restart_btn.click(fn=restart_mcp_client, outputs=status_display)
 
 if __name__ == "__main__":
     # 開発時は `gradio main.py` で実行してホットリロードを有効化
